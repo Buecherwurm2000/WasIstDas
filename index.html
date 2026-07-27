@@ -267,7 +267,14 @@
       if (!currentAnswer || !window.speechSynthesis) return;
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(currentAnswer);
-      u.lang = "de-DE"; u.rate = 1.1;
+      u.lang = "de-DE"; u.rate = 1.0;
+      // Pick best available German voice
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v => v.lang === "de-DE" && v.name.includes("Neural"))
+        || voices.find(v => v.lang === "de-DE" && v.name.includes("Siri"))
+        || voices.find(v => v.lang === "de-DE" && !v.name.includes("("))
+        || voices.find(v => v.lang.startsWith("de"));
+      if (preferred) u.voice = preferred;
       window.speechSynthesis.speak(u);
     }
   </script>
