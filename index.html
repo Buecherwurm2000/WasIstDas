@@ -199,27 +199,42 @@
       document.getElementById("error-msg").style.display = "none";
       document.getElementById("loading").style.display = "flex";
 
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const dataUrl = reader.result;
-        const base64 = dataUrl.split(",")[1];
-        const mimeType = file.type || "image/jpeg";
+      try {
+        // Bild verkleinern auf max 800px
+        const resized = await resizeImage(file, 800);
+        const base64 = resized.split(",")[1];
+        const mimeType = "image/jpeg";
 
-        try {
-          const resp = await fetch("/api/analyze", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ imageBase64: base64, mimeType })
-          });
+        const resp = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64: base64, mimeType })
+        });
 
-          const data = await resp.json();
-          if (!resp.ok) throw new Error(data.error || "Fehler " + resp.status);
-          showResult(dataUrl, data.answer);
-        } catch (err) {
-          showError("Fehler beim Analysieren. Bitte erneut versuchen.");
-        }
-      };
-      reader.readAsDataURL(file);
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Fehler " + resp.status);
+        showResult(resized, data.answer);
+      } catch (err) {
+        showError("Fehler: " + err.message);
+      }
+    }
+
+    function resizeImage(file, maxSize) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const canvas = document.createElement("canvas");
+          let w = img.width, h = img.height;
+          if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+          else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = url;
+      });
     }
 
     function showResult(imgSrc, text) {
