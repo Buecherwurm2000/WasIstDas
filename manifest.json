@@ -1,0 +1,12 @@
+{
+  "name": "Was ist das?",
+  "short_name": "Was ist das?",
+  "description": "Foto machen und sofort wissen was es ist",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f7ff",
+  "theme_color": "#7c3aed",
+  "icons": [
+    { "src": "/icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Was ist das?</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Was ist das?" />
+  <meta name="theme-color" content="#7c3aed" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f8f7ff;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #7c3aed;
+      color: white;
+      padding: 16px 20px;
+      font-size: 1.4rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    main {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-bottom: 100px;
+    }
+    #start-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 16px;
+      min-height: 60vh;
+    }
+    #loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      min-height: 60vh;
+    }
+    .spinner {
+      width: 56px; height: 56px;
+      border: 5px solid #e9d5ff;
+      border-top-color: #7c3aed;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #result { display: none; }
+    .result-top {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    #result-img {
+      width: 110px; height: 110px;
+      border-radius: 16px;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 3px solid #e9d5ff;
+    }
+    #result-title {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: #1e1b4b;
+      line-height: 1.2;
+    }
+    #result-desc { margin-top: 14px; }
+    #result-desc p {
+      font-size: 1.2rem;
+      color: #374151;
+      font-weight: 400;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 58px;
+      border-radius: 16px;
+      border: none;
+      font-size: 1.15rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-purple { background: #7c3aed; color: white; }
+    .btn-purple:hover { background: #6d28d9; }
+    .btn-speak {
+      background: #2563eb; color: white;
+      width: auto; min-height: 48px;
+      font-size: 1rem; padding: 0 20px;
+      border-radius: 12px;
+    }
+    .bottom-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: 12px 20px 28px;
+      background: rgba(248,247,255,0.93);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid #e9d5ff;
+    }
+    .hint {
+      text-align: center;
+      color: #7c3aed;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    #error-msg {
+      display: none;
+      background: #fef2f2;
+      border: 2px solid #fca5a5;
+      border-radius: 12px;
+      padding: 14px;
+      color: #dc2626;
+      font-weight: 600;
+      text-align: center;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span style="font-size:1.8rem">📸</span>
+    Was ist das?
+  </header>
+
+  <main>
+    <div id="start-area">
+      <span style="font-size:6rem">🔍</span>
+      <p class="hint">Mache ein Foto — die KI erklärt sofort was es ist</p>
+    </div>
+
+    <div id="loading">
+      <div class="spinner"></div>
+      <p style="color:#7c3aed;font-weight:700;font-size:1.1rem;margin-top:8px">Analysiere…</p>
+    </div>
+
+    <div id="error-msg"></div>
+
+    <div id="result">
+      <div class="result-top">
+        <img id="result-img" src="" alt="Foto" />
+        <div id="result-title"></div>
+      </div>
+      <div id="result-desc"></div>
+      <div style="margin-top:16px">
+        <button class="btn btn-speak" onclick="speakResult()">🔊 Vorlesen</button>
+      </div>
+    </div>
+  </main>
+
+  <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none" />
+
+  <div class="bottom-bar">
+    <button class="btn btn-purple" onclick="openCamera()">
+      📸 Was ist das?
+    </button>
+  </div>
+
+  <script>
+    let currentAnswer = "";
+
+    document.getElementById("file-input").addEventListener("change", handleFile);
+
+    function openCamera() {
+      document.getElementById("file-input").click();
+    }
+
+    async function handleFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      e.target.value = "";
+
+      document.getElementById("start-area").style.display = "none";
+      document.getElementById("result").style.display = "none";
+      document.getElementById("error-msg").style.display = "none";
+      document.getElementById("loading").style.display = "flex";
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result;
+        const base64 = dataUrl.split(",")[1];
+        const mimeType = file.type || "image/jpeg";
+
+        try {
+          const resp = await fetch("/api/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageBase64: base64, mimeType })
+          });
+
+          if (!resp.ok) throw new Error("Fehler " + resp.status);
+          const data = await resp.json();
+          showResult(dataUrl, data.answer);
+        } catch (err) {
+          showError("Fehler beim Analysieren. Bitte erneut versuchen.");
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function showResult(imgSrc, text) {
+      const lines = text.split(/\n+/).filter(Boolean);
+      const clean = s => s.replace(/^#+\s*/, "").replace(/\*\*/g, "").replace(/\*/g, "").trim();
+
+      const titel = clean(lines[0] || "").split(/\s+/).slice(0, 3).join(" ");
+      const rest = lines.slice(1).map(clean).join(" ");
+      const sentences = rest ? rest.split(/(?<=[.!?])\s+/).filter(Boolean) : [];
+
+      currentAnswer = titel + (rest ? ". " + rest : "");
+
+      document.getElementById("result-img").src = imgSrc;
+      document.getElementById("result-title").textContent = titel;
+      document.getElementById("result-desc").innerHTML = sentences.map(s => `<p>${s}</p>`).join("");
+
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("result").style.display = "block";
+    }
+
+    function showError(msg) {
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("start-area").style.display = "flex";
+      const el = document.getElementById("error-msg");
+      el.textContent = msg;
+      el.style.display = "block";
+    }
+
+    function speakResult() {
+      if (!currentAnswer || !window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(currentAnswer);
+      u.lang = "de-DE"; u.rate = 1.1;
+      window.speechSynthesis.speak(u);
+    }
+  </script>
+</body>
+</html>
