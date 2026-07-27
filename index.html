@@ -212,8 +212,8 @@
             body: JSON.stringify({ imageBase64: base64, mimeType })
           });
 
-          if (!resp.ok) throw new Error("Fehler " + resp.status);
           const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || "Fehler " + resp.status);
           showResult(dataUrl, data.answer);
         } catch (err) {
           showError("Fehler beim Analysieren. Bitte erneut versuchen.");
